@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trendy</title>
+<style>
+  :root {
+    --bg: #f6f6f4;
+    --fg: #1a1a1a;
+    --muted: #8a8a86;
+    --cell: #e9e9e6;
+    --cell-border: #dcdcd8;
+    --accent: #4f78c8;
+    --overlay: rgba(0, 0, 0, .55);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111113;
+      --fg: #ededed;
+      --muted: #7b7b80;
+      --cell: #1c1c20;
+      --cell-border: #2a2a2f;
+      --accent: #7ea0e8;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 22px 24px 10px;
+    flex-wrap: wrap;
+  }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); }
+  #status { padding: 0 24px 12px; color: var(--muted); min-height: 1.4em; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+    padding: 0 24px 40px;
+  }
+  .cell {
+    position: relative;
+    aspect-ratio: 1;
+    background: var(--cell);
+    border: 1px solid var(--cell-border);
+    border-radius: 6px;
+    overflow: hidden;
+    padding: 0;
+    color: var(--muted);
+    font: inherit;
+    cursor: default;
+  }
+  .cell.has-image { cursor: pointer; }
+  .cell img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+    transition: transform .25s ease;
+  }
+  .cell.has-image:hover img { transform: scale(1.04); }
+  .cell .date {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 4px 8px;
+    font-size: 11px;
+    text-align: left;
+  }
+  .cell.has-image .date {
+    color: #fff;
+    background: linear-gradient(transparent, var(--overlay));
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .cell.has-image:hover .date, .cell.has-image:focus-visible .date { opacity: 1; }
+  .cell.empty .date { top: 0; display: flex; align-items: center; justify-content: center; }
+  .cell.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cell.future { opacity: .45; border-style: dashed; }
+
+  dialog {
+    border: none; border-radius: 10px; padding: 0;
+    background: var(--bg); color: var(--fg);
+    max-width: min(92vw, 560px); width: 100%;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog img { width: 100%; aspect-ratio: 1; display: block; background: var(--cell); }
+  .info { padding: 16px 18px 18px; }
+  .info h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    background: var(--cell); border: 1px solid var(--cell-border);
+    border-radius: 999px; padding: 3px 10px; font-size: 12px;
+  }
+  .prompt { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+  .links a { color: var(--accent); margin-right: 14px; font-size: 13px; }
+  .close {
+    position: absolute; top: 8px; right: 8px;
+    border: none; border-radius: 999px; width: 30px; height: 30px;
+    background: var(--overlay); color: #fff; font-size: 16px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trendy</h1>
+  <p>One AI image a day, painted from the day's top trends. Stored on IPFS.</p>
+</header>
+<div id="status">Loading…</div>
+<main class="grid" id="grid"></main>
+
+<dialog id="dlg">
+  <button class="close" id="close" aria-label="Close">×</button>
+  <img id="dlg-img" alt="">
+  <div class="info">
+    <h2 id="dlg-date"></h2>
+    <div class="chips" id="dlg-trends"></div>
+    <p class="prompt" id="dlg-prompt"></p>
+    <div class="links">
+      <a id="dlg-image-link" target="_blank" rel="noopener">Image on IPFS</a>
+      <a id="dlg-meta-link" target="_blank" rel="noopener">Metadata on IPFS</a>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  // Change this one line to switch gateways (ipfs.io, dweb.link, your dedicated Pinata gateway).
+  const GATEWAY = "https://gateway.pinata.cloud/ipfs/";
+  const START_DATE = "2026-09-08";  // first cell; the grid grows day by day from here
+  const DAYS = 365;
+
+  const grid = document.getElementById("grid");
+  const status = document.getElementById("status");
+  const dlg = document.getElementById("dlg");
+
+  const url = (cid) => GATEWAY + cid;
+  const isoDate = (d) => d.toISOString().slice(0, 10);
+
+  function el(tag, attrs = {}, text) {
+    const node = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function render(entries) {
+    const byDate = Object.fromEntries(entries.map((e) => [e.date, e]));
+    const todayIso = isoDate(new Date());
+    const start = new Date(START_DATE + "T00:00:00Z");
+    let shown = 0;
+
+    for (let i = 0; i < DAYS; i++) {
+      const d = new Date(start);
+      d.setUTCDate(start.getUTCDate() + i);
+      const iso = isoDate(d);
+      const entry = byDate[iso];
+
+      const cell = el("button", { class: "cell " + (entry ? "has-image" : "empty"), title: iso });
+      if (iso === todayIso) cell.classList.add("today");
+      if (iso > todayIso) cell.classList.add("future");
+      if (entry) {
+        shown++;
+        const img = el("img", { src: url(entry.image_cid), alt: entry.trends.join(", "), loading: "lazy", decoding: "async" });
+        cell.appendChild(img);
+        cell.addEventListener("click", () => open(entry));
+      } else {
+        cell.disabled = true;
+      }
+      cell.appendChild(el("div", { class: "date" }, iso));
+      grid.appendChild(cell);
+    }
+    status.textContent = `${shown} of ${DAYS} days, starting ${START_DATE}`;
+  }
+
+  function open(entry) {
+    document.getElementById("dlg-img").src = url(entry.image_cid);
+    document.getElementById("dlg-date").textContent = entry.date;
+    const chips = document.getElementById("dlg-trends");
+    chips.replaceChildren(...entry.trends.map((t) => el("span", { class: "chip" }, t)));
+    document.getElementById("dlg-prompt").textContent = entry.prompt || "";
+    document.getElementById("dlg-image-link").href = url(entry.image_cid);
+    document.getElementById("dlg-meta-link").href = url(entry.metadata_cid);
+    dlg.showModal();
+  }
+
+  document.getElementById("close").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+
+  fetch("gallery.json", { cache: "no-store" })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(render)
+    .catch((err) => {
+      status.textContent = "Could not load gallery.json (" + err.message + "). " +
+        "If you opened this file directly, run: python main.py serve";
+    });
+</script>
+</body>
+</html>
