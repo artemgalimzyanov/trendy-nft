@@ -89,5 +89,18 @@
     "prompt": "A single striking artwork that visually blends these trending topics of the day into one coherent scene: Sweden election win; South Africa femicide spree; Canada-EU associate membership; US tariffs on Russian oil; Australia visa crackdown. Style: vibrant digital illustration, surreal and dreamlike, highly detailed, cinematic lighting, no text, no letters, no watermark.",
     "image_cid": "QmSFGiqtmn4C3korKwNFyHBNRc6x1vhW8MKATXH6t8Fn1o",
     "metadata_cid": "QmPBsPhmNUfvJmfGAyZvfo9ugnE1wdwWX6pMeL764LdYnS"
+  },
+  {
+    "date": "2026-09-18",
+    "trends": [
+      "Macron orders counter Russian hybrid attacks",
+      "Pakistan mosque bombing",
+      "Philippines school shooting",
+      "Japan raises interest rates",
+      "Ceuta migrant evacuation"
+    ],
+    "prompt": "A single striking artwork that visually blends these trending topics of the day into one coherent scene: Macron orders counter Russian hybrid attacks; Pakistan mosque bombing; Philippines school shooting; Japan raises interest rates; Ceuta migrant evacuation. Style: vibrant digital illustration, surreal and dreamlike, highly detailed, cinematic lighting, no text, no letters, no watermark.",
+    "image_cid": "QmQGXbpPTP5aySzgUrr1xk4yymuVx61QKesLvYBgC2Ut5a",
+    "metadata_cid": "QmUrGsSDpGJDwiaEFFxmKjEixSHw4tptbvzHJcotcDCeTf"
   }
 ]
