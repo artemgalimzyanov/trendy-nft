@@ -3,6 +3,12 @@
 COLLECTION_NAME = "Trendy"
 
 
+def _strip_style(prompt: str) -> str:
+    """Drop the trailing 'Style: ...' clause, keeping only the trend description."""
+    idx = prompt.find("Style:")
+    return prompt[:idx].rstrip() if idx != -1 else prompt
+
+
 def build_metadata(trends: list[str], image_uri: str, run_date: str, prompt: str = "") -> dict:
     """Return a metadata dict following the ERC-721 / OpenSea JSON schema."""
     if not trends:
@@ -24,5 +30,5 @@ def build_metadata(trends: list[str], image_uri: str, run_date: str, prompt: str
         ),
         "image": image_uri,
         "attributes": attributes,
-        "properties": {"prompt": prompt, "generator": "trendy-nft"},
+        "properties": {"prompt": _strip_style(prompt), "generator": "trendy-nft"},
     }

@@ -1,8 +1,12 @@
 """Step 2a: turn trend words into an image prompt (pure function)."""
 
 DEFAULT_STYLE = (
-    "vibrant digital illustration, surreal and dreamlike, highly detailed, "
-    "cinematic lighting, no text, no letters, no watermark"
+    "Editorial surrealist illustrations that transform each news story into a symbolic "
+    "visual narrative. Combine recognizable people, places, objects, and cultural "
+    "references in unexpected but coherent compositions. Use bold shapes, expressive "
+    "gestures, selective exaggeration, and a refined magazine-art aesthetic. Rich but "
+    "controlled colors, dramatic perspective, and subtle visual metaphors should create "
+    "images that feel intelligent, memorable, and immediately connected to the story"
 )
 
 TEMPLATE = (
@@ -10,7 +14,6 @@ TEMPLATE = (
     "into one coherent scene: {topics}. Style: {style}."
 )
 
-# gpt-image-1 accepts far more, but keep prompts short and safe for any model.
 MAX_PROMPT_CHARS = 4000
 
 

@@ -10,7 +10,7 @@ from trendy.image import generate_image, placeholder_png, shrink_to_jpeg
 from trendy.metadata import build_metadata
 from trendy.prompt import build_prompt
 from trendy.storage import gateway_url, ipfs_uri, upload_file, upload_json
-from trendy.trends import DEFAULT_COUNT, DEFAULT_GEO, get_trends
+from trendy.trends import DEFAULT_COUNT, get_trends
 
 log = logging.getLogger(__name__)
 
@@ -25,8 +25,6 @@ def today() -> str:
 def run(
     run_date: str | None = None,
     n: int = DEFAULT_COUNT,
-    source: str = "news",
-    geo: str = DEFAULT_GEO,
     trends: list[str] | None = None,
     dry_run: bool = False,
     force: bool = False,
@@ -46,7 +44,7 @@ def run(
         return json.loads(result_path.read_text())
 
     # 1. trends
-    trends = trends or get_trends(n=n, source=source, geo=geo, dry_run=dry_run)
+    trends = trends or get_trends(n=n, dry_run=dry_run)
     (out / "trends.json").write_text(json.dumps(trends, indent=2, ensure_ascii=False))
     log.info("Trends: %s", trends)
 

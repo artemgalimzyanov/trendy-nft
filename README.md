@@ -3,14 +3,14 @@
 Daily pipeline: **top trends → AI image → IPFS**, with NFT‑ready metadata.
 
 ```
-headlines (10 world news RSS feeds) → 5 global topics (OpenAI gpt-5.4-mini) → prompt
-→ image (OpenAI gpt-image-1) → 512x512 JPEG → IPFS (Pinata) → metadata.json → IPFS
+headlines (21 world news RSS feeds) → 5 global topics (OpenAI gpt-5.4-mini) → prompt
+→ image (OpenAI gpt-image-2) → 512x512 JPEG → IPFS (Pinata) → metadata.json → IPFS
 → docs/gallery.json → static grid page (GitHub Pages)
 ```
 
-Trends come from BBC, CNN, Al Jazeera, The Guardian, DW, France 24, CNA, Times of India, NYT and SCMP.
-A small text model picks the 5 topics covered by the most outlets. `--source google --geo US,GB,IN` switches to
-Google Trends (sorted by search traffic) instead.
+Trends come from ~20 outlets spanning North America, Europe, the Middle East, Asia, Africa,
+Latin America, Eastern Europe and Oceania (see `NEWS_FEEDS` in `trendy/trends.py`).
+A small text model picks the 5 topics covered by the most outlets.
 
 Only the small JPEG (~50 KB) is pinned; the full 1024x1024 PNG stays in `output/` and in the workflow artifact.
 
@@ -30,7 +30,6 @@ cp .env.example .env      # then fill in OPENAI_API_KEY and PINATA_JWT
 ```bash
 python main.py trends                                   # 1. 5 global topics from world news (OpenAI, <1 cent)
 python main.py trends --dry-run                         #    same, without the model: raw headlines
-python main.py trends --source google --geo US,GB,IN    #    Google Trends instead, sorted by traffic
 python main.py prompt --trends "a,b,c"                  # 2a. show the image prompt
 python main.py image --trends "a,b,c" --dry-run         # 2b. placeholder PNG + JPEG, free
 python main.py image --trends "a,b,c"                   #     real image (OpenAI, ~$0.04)
@@ -68,7 +67,7 @@ All tests run offline and need no API keys.
 
 1. Push this folder to a GitHub repo.
 2. In the repo: Settings → Secrets and variables → Actions → add `OPENAI_API_KEY` and `PINATA_JWT`.
-3. The workflow in `.github/workflows/daily.yml` runs at 09:00 UTC. Trigger it manually from the Actions tab ("Run workflow", optionally as dry run) to test.
+3. The workflow in `.github/workflows/daily.yml` runs at 18:00 UTC. Trigger it manually from the Actions tab ("Run workflow", optionally as dry run) to test.
 4. Each real run commits `docs/gallery.json` back to the repo and uploads `output/` as a workflow artifact.
 
 ## Next: minting

@@ -7,7 +7,7 @@ from io import BytesIO
 
 from trendy.config import require_env
 
-MODEL = "gpt-image-1"
+MODEL = "gpt-image-2"
 DEFAULT_SIZE = "1024x1024"  # smallest size gpt-image-1 offers
 DEFAULT_QUALITY = "medium"  # low | medium | high
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"

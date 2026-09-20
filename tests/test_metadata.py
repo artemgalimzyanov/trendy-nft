@@ -17,6 +17,13 @@ def test_metadata_attributes_one_per_trend_plus_date():
     assert traits == {"Trend 1": "A", "Trend 2": "B", "Date": "2026-09-07"}
 
 
+def test_metadata_prompt_drops_trailing_style_clause():
+    prompt = "A scene blending: Solar Eclipse; World Cup. Style: vibrant digital illustration, no text."
+    data = build_metadata(["Solar Eclipse", "World Cup"], "ipfs://abc", "2026-09-07", prompt=prompt)
+    assert data["properties"]["prompt"] == "A scene blending: Solar Eclipse; World Cup."
+    assert "Style:" not in data["properties"]["prompt"]
+
+
 def test_metadata_rejects_empty_inputs():
     with pytest.raises(ValueError):
         build_metadata([], "ipfs://abc", "2026-09-07")

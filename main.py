@@ -27,7 +27,7 @@ def _split_trends(value: str | None) -> list[str] | None:
 
 
 def cmd_trends(args) -> int:
-    result = trends.get_trends(n=args.n, source=args.source, geo=args.geo, dry_run=args.dry_run)
+    result = trends.get_trends(n=args.n, dry_run=args.dry_run)
     out = output_dir_for(pipeline.today()) / "trends.json"
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False))
     for t in result:
@@ -88,8 +88,6 @@ def cmd_run(args) -> int:
     result = pipeline.run(
         run_date=args.date,
         n=args.n,
-        source=args.source,
-        geo=args.geo,
         trends=_split_trends(args.trends),
         dry_run=args.dry_run,
         force=args.force,
@@ -105,10 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("trends", help="fetch today's top trends")
     p.add_argument("--n", type=int, default=trends.DEFAULT_COUNT, help="how many trends")
-    p.add_argument("--source", choices=["news", "google"], default="news",
-                   help="news = world headlines distilled by OpenAI (default); google = Google Trends")
-    p.add_argument("--geo", default=trends.DEFAULT_GEO, help='google source only, e.g. "US,GB,IN"')
-    p.add_argument("--dry-run", action="store_true", help="news source: skip the model, use raw headlines")
+    p.add_argument("--dry-run", action="store_true", help="skip the model, use raw headlines")
     p.set_defaults(func=cmd_trends)
 
     p = sub.add_parser("prompt", help="build the image prompt from trends")
@@ -136,8 +131,6 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("run", help="run the whole pipeline")
     p.add_argument("--date", help="ISO date (default today)")
     p.add_argument("--n", type=int, default=trends.DEFAULT_COUNT, help="how many trends")
-    p.add_argument("--source", choices=["news", "google"], default="news")
-    p.add_argument("--geo", default=trends.DEFAULT_GEO, help='google source only, e.g. "US,GB,IN"')
     p.add_argument("--trends", help="skip fetching; use these comma-separated trends")
     p.add_argument("--dry-run", action="store_true", help="no paid API calls")
     p.add_argument("--force", action="store_true", help="redo even if today's result exists")

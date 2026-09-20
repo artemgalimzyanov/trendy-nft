@@ -106,7 +106,7 @@ Runtime deps (keep minimal): `requests`, `feedparser`, `openai`, `python-dotenv`
 - Manual: `python main.py run --dry-run` (no cost) then `python main.py run` (real). Verify both gateway URLs open.
 
 ### Step 5 – Daily schedule (`.github/workflows/daily.yml`)
-- Cron `0 9 * * *` (09:00 UTC) plus `workflow_dispatch` for manual triggering.
+- Cron `0 18 * * *` (18:00 UTC) plus `workflow_dispatch` for manual triggering.
 - Steps: checkout → setup Python → install → `python main.py run` with `OPENAI_API_KEY` and `PINATA_JWT` from repo secrets → upload `output/` as a workflow artifact.
 - Requires: `git init`, push to GitHub, add the two secrets.
 
@@ -135,8 +135,11 @@ Decisions: pin only a 512x512 JPEG (~50 KB) instead of the raw 1024 PNG; show a 
 - Google Trends per country turned out to be local sports/celebrity searches, ordered by recency, with no China feed. Replaced as default.
 - `fetch_headlines()` pulls 15 headlines from each of 10 world outlets (BBC, CNN, Al Jazeera, Guardian, DW, France 24, CNA, Times of India, NYT, SCMP); failing feeds are skipped.
 - `pick_topics()` sends them to OpenAI `gpt-5.4-mini` (JSON mode) and gets the 5 topics covered by the most outlets. `fallback_topics()` (first headline of each outlet, round-robin) is used on dry runs or if the model fails.
-- Google Trends kept as `--source google --geo US,GB,IN`, now merged across geos and sorted by traffic.
 - **Test:** `tests/test_trends.py` (mocked feeds + fake model client); `python main.py trends --dry-run` (free); `python main.py trends` (real, <1 cent).
+
+### Step 12 (added 2026-09-20) – Global feed coverage, Google Trends removed
+- `NEWS_FEEDS` expanded from 10 to 21 outlets to cover regions that had no representation: Africa (AllAfrica, Africanews), Latin America (MercoPress, Folha de S.Paulo), Russia/Eastern Europe (The Moscow Times, Kyiv Independent), Oceania (ABC News Australia), plus Middle East Eye, Japan Times, Le Monde and El Pais.
+- The Google Trends fallback path (`fetch_google_trends`, `--source google --geo`) was unused since Step 11 replaced it as the default and is now removed entirely, along with `parse_entries`/`_parse_traffic` (traffic sorting) and the dead `fetch_news_headlines` helper. `get_trends()` no longer takes `source`/`geo`.
 
 ### Step 10 – Auto-publish (`.github/workflows/daily.yml`)
 - Workflow has `contents: write`; after a real run it commits `docs/gallery.json` and pushes. GitHub Pages serves `/docs` from `main`.

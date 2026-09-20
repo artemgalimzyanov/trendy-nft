@@ -1,14 +1,11 @@
 """Step 1: today's top trends.
 
-Default source "news": headlines from world news outlets, distilled into the
-N most widely covered global topics by a small OpenAI text model.
-Alternative source "google": Google Trends daily RSS for one or more countries,
-sorted by search traffic.
+Headlines from world news outlets, distilled into the N most widely covered
+global topics by a small OpenAI text model.
 """
 
 import json
 import logging
-import re
 
 import feedparser
 import requests
@@ -21,19 +18,36 @@ DEFAULT_COUNT = 5
 USER_AGENT = "trendy-nft/0.1 (+https://github.com)"
 TIMEOUT = 15
 
-# --- news source -------------------------------------------------------------
-
 NEWS_FEEDS = {
+    # North America / UK
     "BBC World": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "CNN World": "http://rss.cnn.com/rss/edition_world.rss",
-    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
     "The Guardian World": "https://www.theguardian.com/world/rss",
+    "NYT World": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+    # Western Europe
     "DW": "https://rss.dw.com/rdf/rss-en-all",
     "France 24": "https://www.france24.com/en/rss",
+    "Le Monde (FR)": "https://www.lemonde.fr/international/rss_full.xml",
+    "El Pais (ES)": "https://ep00.epimg.net/rss/internacional/portada.xml",
+    # Middle East
+    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+    "Middle East Eye": "https://www.middleeasteye.net/rss",
+    # South / Southeast / East Asia
     "CNA Singapore": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml",
     "Times of India": "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-    "NYT World": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
     "SCMP": "https://www.scmp.com/rss/91/feed",
+    "Japan Times": "https://www.japantimes.co.jp/feed/",
+    # Africa
+    "AllAfrica": "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf",
+    "Africanews": "https://www.africanews.com/feed/rss",
+    # Latin America
+    "MercoPress": "https://en.mercopress.com/rss/",
+    "Folha de S.Paulo (BR)": "https://feeds.folha.uol.com.br/mundo/rss091.xml",
+    # Russia / Eastern Europe
+    "The Moscow Times": "https://www.themoscowtimes.com/rss/news",
+    "Kyiv Independent": "https://kyivindependent.com/feed/rss/",
+    # Oceania
+    "ABC News Australia": "https://www.abc.net.au/news/feed/51120/rss.xml",
 }
 HEADLINES_PER_FEED = 15
 
@@ -48,16 +62,8 @@ TOPIC_SYSTEM_PROMPT = (
     'Respond with JSON only, in the form {{"topics": ["...", "..."]}}.'
 )
 
-# --- google trends source ----------------------------------------------------
 
-GOOGLE_TRENDS_RSS = "https://trends.google.com/trending/rss?geo={geo}"
-DEFAULT_GEO = "US"
-
-# kept for the fallback path
-NEWS_RSS = NEWS_FEEDS["BBC World"]
-
-
-# --- shared helpers ----------------------------------------------------------
+# --- fetch + parse -------------------------------------------------------------
 
 
 def _fetch_feed(url: str) -> str:
@@ -68,23 +74,13 @@ def _fetch_feed(url: str) -> str:
 
 def parse_titles(xml_text: str) -> list[str]:
     """Extract entry titles from RSS/Atom XML, in feed order."""
-    return [t for t, _ in parse_entries(xml_text)]
-
-
-def parse_entries(xml_text: str) -> list[tuple[str, int]]:
-    """Extract (title, approx_traffic) pairs; traffic is 0 when the feed has none."""
     feed = feedparser.parse(xml_text)
-    entries = []
+    titles = []
     for entry in feed.entries:
         title = (getattr(entry, "title", "") or "").strip()
         if title:
-            entries.append((title, _parse_traffic(entry.get("ht_approx_traffic"))))
-    return entries
-
-
-def _parse_traffic(value) -> int:
-    digits = re.sub(r"[^\d]", "", str(value or ""))
-    return int(digits) if digits else 0
+            titles.append(title)
+    return titles
 
 
 def _dedupe(items: list[str]) -> list[str]:
@@ -98,7 +94,7 @@ def _dedupe(items: list[str]) -> list[str]:
     return result
 
 
-# --- news: fetch + distil ----------------------------------------------------
+# --- fetch + distil ------------------------------------------------------------
 
 
 def fetch_headlines(
@@ -161,56 +157,23 @@ def fallback_topics(headlines: dict[str, list[str]], n: int = DEFAULT_COUNT) -> 
     return _dedupe(picked)[:n]
 
 
-# --- google trends -----------------------------------------------------------
+# --- entry point -----------------------------------------------------------
 
 
-def fetch_google_trends(geo: str = DEFAULT_GEO) -> list[str]:
-    """Daily trending searches for one or more comma-separated geos, sorted by traffic."""
-    entries: list[tuple[str, int]] = []
-    for code in [g.strip().upper() for g in geo.split(",") if g.strip()]:
-        try:
-            entries += parse_entries(_fetch_feed(GOOGLE_TRENDS_RSS.format(geo=code)))
-        except Exception as exc:
-            log.warning("Google Trends %s failed (%s); skipping", code, exc)
-    entries.sort(key=lambda e: e[1], reverse=True)
-    return _dedupe([title for title, _ in entries])
+def get_trends(n: int = DEFAULT_COUNT, dry_run: bool = False, client=None) -> list[str]:
+    """Return the top n trends: world headlines distilled by OpenAI.
 
-
-def fetch_news_headlines() -> list[str]:
-    """Flat list of BBC World headlines (simple fallback)."""
-    return parse_titles(_fetch_feed(NEWS_RSS))
-
-
-# --- entry point -------------------------------------------------------------
-
-
-def get_trends(
-    n: int = DEFAULT_COUNT,
-    source: str = "news",
-    geo: str = DEFAULT_GEO,
-    dry_run: bool = False,
-    client=None,
-) -> list[str]:
-    """Return the top n trends.
-
-    source="news":   world headlines distilled by OpenAI (fallback: round-robin headlines).
-    source="google": Google Trends for `geo` (comma-separated codes), sorted by traffic.
-    dry_run=True skips the model call and uses the fallback.
+    dry_run=True skips the model call and uses the round-robin headline fallback.
     """
-    if source == "google":
-        trends = fetch_google_trends(geo)[:n]
-    elif source == "news":
-        headlines = fetch_headlines()
-        if dry_run:
-            trends = fallback_topics(headlines, n)
-        else:
-            try:
-                trends = pick_topics(headlines, n, client=client)
-            except Exception as exc:
-                log.warning("Topic model failed (%s); using headline fallback", exc)
-                trends = fallback_topics(headlines, n)
+    headlines = fetch_headlines()
+    if dry_run:
+        trends = fallback_topics(headlines, n)
     else:
-        raise ValueError(f"Unknown source {source!r}; use 'news' or 'google'")
+        try:
+            trends = pick_topics(headlines, n, client=client)
+        except Exception as exc:
+            log.warning("Topic model failed (%s); using headline fallback", exc)
+            trends = fallback_topics(headlines, n)
 
     if not trends:
         raise RuntimeError("No trends found from any source")

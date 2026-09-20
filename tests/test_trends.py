@@ -6,18 +6,6 @@ import responses
 
 from trendy import trends
 
-GOOGLE_RSS = """<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:ht="https://trends.google.com/trending/rss">
-  <channel>
-    <title>Daily Search Trends</title>
-    <item><title>small thing</title><ht:approx_traffic>200+</ht:approx_traffic></item>
-    <item><title>Big Story</title><ht:approx_traffic>50,000+</ht:approx_traffic></item>
-    <item><title>  big story </title><ht:approx_traffic>1,000+</ht:approx_traffic></item>
-    <item><title>Medium Story</title><ht:approx_traffic>2,000+</ht:approx_traffic></item>
-  </channel>
-</rss>
-"""
-
 NEWS_A = """<?xml version="1.0"?><rss version="2.0"><channel>
 <item><title>A1 headline</title></item>
 <item><title>A2 headline</title></item>
@@ -48,12 +36,6 @@ class FakeClient:
 
 
 # --- parsing ---------------------------------------------------------------
-
-
-def test_parse_entries_reads_titles_and_traffic():
-    entries = trends.parse_entries(GOOGLE_RSS)
-    assert entries[0] == ("small thing", 200)
-    assert entries[1] == ("Big Story", 50000)
 
 
 def test_parse_titles_strips():
@@ -129,24 +111,3 @@ def test_get_trends_news_falls_back_when_model_fails(monkeypatch):
         chat = SimpleNamespace(completions=SimpleNamespace(create=lambda **k: 1 / 0))
 
     assert trends.get_trends(n=1, client=Broken()) == ["A1 headline"]
-
-
-# --- google source --------------------------------------------------------
-
-
-@responses.activate
-def test_get_trends_google_sorts_by_traffic_and_dedupes():
-    responses.get(trends.GOOGLE_TRENDS_RSS.format(geo="US"), body=GOOGLE_RSS)
-    assert trends.get_trends(n=3, source="google", geo="US") == ["Big Story", "Medium Story", "small thing"]
-
-
-@responses.activate
-def test_get_trends_google_merges_multiple_geos_and_skips_failures():
-    responses.get(trends.GOOGLE_TRENDS_RSS.format(geo="US"), body=GOOGLE_RSS)
-    responses.get(trends.GOOGLE_TRENDS_RSS.format(geo="GB"), status=400)
-    assert trends.get_trends(n=1, source="google", geo="us, gb") == ["Big Story"]
-
-
-def test_get_trends_rejects_unknown_source():
-    with pytest.raises(ValueError):
-        trends.get_trends(source="bing")
