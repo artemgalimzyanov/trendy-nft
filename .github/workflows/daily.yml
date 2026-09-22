@@ -2,7 +2,7 @@ name: Daily Trendy run
 
 on:
   schedule:
-    - cron: "0 18 * * *"   # 18:00 UTC every day
+    - cron: "0 15 * * *"   # 18:00 UTC every day
   workflow_dispatch:
     inputs:
       dry_run:
