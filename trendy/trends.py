@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_COUNT = 5
 USER_AGENT = "trendy-nft/0.1 (+https://github.com)"
-TIMEOUT = 15
+TIMEOUT = 30
 
 NEWS_FEEDS = {
     # North America / UK
@@ -45,7 +45,7 @@ NEWS_FEEDS = {
     "Folha de S.Paulo (BR)": "https://feeds.folha.uol.com.br/mundo/rss091.xml",
     # Russia / Eastern Europe
     "The Moscow Times": "https://www.themoscowtimes.com/rss/news",
-    "Kyiv Independent": "https://kyivindependent.com/feed/rss/",
+    "Arab News": "https://www.arabnews.com/rss.xml",
     # Oceania
     "ABC News Australia": "https://www.abc.net.au/news/feed/51120/rss.xml",
 }
@@ -56,7 +56,7 @@ TOPIC_SYSTEM_PROMPT = (
     "You are a world news editor. You receive today's top headlines from several "
     "international outlets. Identify the {n} most widely covered global news topics of "
     "the day, ranked by how many different outlets cover them. Each topic must be a short "
-    "English phrase of 2 to 6 words naming the concrete event, person or subject "
+    "English phrase of 3 to 6 words naming the concrete event, person or subject "
     "(for example 'Norway state funeral for King Harald'), not a broad category. "
     "No duplicates, no near-duplicates. "
     'Respond with JSON only, in the form {{"topics": ["...", "..."]}}.'
