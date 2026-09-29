@@ -141,6 +141,15 @@ Decisions: pin only a 512x512 JPEG (~50 KB) instead of the raw 1024 PNG; show a 
 - `NEWS_FEEDS` expanded from 10 to 21 outlets to cover regions that had no representation: Africa (AllAfrica, Africanews), Latin America (MercoPress, Folha de S.Paulo), Russia/Eastern Europe (The Moscow Times, Kyiv Independent), Oceania (ABC News Australia), plus Middle East Eye, Japan Times, Le Monde and El Pais.
 - The Google Trends fallback path (`fetch_google_trends`, `--source google --geo`) was unused since Step 11 replaced it as the default and is now removed entirely, along with `parse_entries`/`_parse_traffic` (traffic sorting) and the dead `fetch_news_headlines` helper. `get_trends()` no longer takes `source`/`geo`.
 
+### Step 13 (added 2026-09-27) – Cartoon cast acts out the news (`trendy/scene.py`)
+Decisions: a text model writes the actions; the recurring hero is a young boy; the image model still invents the caption.
+- **13a – `trendy/scene.py`** (new module). `write_actions(topics)` sends the ranked topics to `gpt-5.4-mini` (JSON mode) and gets one short, drawable action per topic, built on the topic's main verb: topic 1 → what the boy does, topics 2–3 → what someone in his household does (grandparents, butler, gardener, dogs), topics 4+ → a small prop. Missing or empty actions are filled from `fallback_actions(topics)`, a generic no-model version used on dry runs or if the model fails (`get_actions(topics, dry_run)`).
+  - **Test:** `tests/test_scene.py` (fake model client); `python main.py scene --trends "a,b,c" --dry-run` (free); `python main.py scene --trends "a,b,c"` (real, <1 cent).
+- **13b – `trendy/prompt.py`**. `TEMPLATE` is rebuilt around the scene: the same boy every day (fixed look in `HERO`), "In the centre: <action 1>. Around him: <actions 2–3>. Small background details: <actions 4+>." `build_prompt(trends, actions=None)` uses the fallback actions when none are given, so it stays free and offline. `DEFAULT_STYLE` is unchanged.
+  - **Test:** `tests/test_prompt.py`; `python main.py prompt --trends "a,b,c" --dry-run`.
+- **13c – wiring**. `pipeline.run()` calls `get_actions()` between trends and prompt and saves `output/<date>/actions.json`; the `prompt` and `image` commands build their prompt the same way (`--dry-run` = fallback actions).
+  - **Test:** `tests/test_pipeline.py`; `python main.py run --dry-run --force`, then read `output/<date>/actions.json` and `prompt.txt`.
+
 ### Step 10 – Auto-publish (`.github/workflows/daily.yml`)
 - Workflow has `contents: write`; after a real run it commits `docs/gallery.json` and pushes. GitHub Pages serves `/docs` from `main`.
 - **Test:** manual "Run workflow", then refresh the Pages URL.

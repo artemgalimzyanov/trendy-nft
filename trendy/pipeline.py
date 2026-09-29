@@ -9,6 +9,7 @@ from trendy.gallery import add_entry
 from trendy.image import generate_image, placeholder_png, shrink_to_jpeg
 from trendy.metadata import build_metadata
 from trendy.prompt import build_prompt
+from trendy.scene import get_actions
 from trendy.storage import gateway_url, ipfs_uri, upload_file, upload_json
 from trendy.trends import DEFAULT_COUNT, get_trends
 
@@ -29,11 +30,11 @@ def run(
     dry_run: bool = False,
     force: bool = False,
 ) -> dict:
-    """Run trends -> prompt -> image -> shrink -> upload -> metadata -> upload -> gallery.
+    """Run trends -> actions -> prompt -> image -> shrink -> upload -> metadata -> upload -> gallery.
 
     Every intermediate artefact is written to output/<date>/.
     With dry_run=True no paid API is called (headline fallback instead of the topic
-    model, placeholder image, fake CIDs) and docs/gallery.json is left untouched.
+    model, fallback actions, placeholder image, fake CIDs) and docs/gallery.json is left untouched.
     """
     run_date = run_date or today()
     out = output_dir_for(run_date)
@@ -48,8 +49,13 @@ def run(
     (out / "trends.json").write_text(json.dumps(trends, indent=2, ensure_ascii=False))
     log.info("Trends: %s", trends)
 
+    # 1b. what the boy and his household do with today's news
+    actions = get_actions(trends, dry_run=dry_run)
+    (out / "actions.json").write_text(json.dumps(actions, indent=2, ensure_ascii=False))
+    log.info("Actions: %s", actions)
+
     # 2. prompt + image (full-size PNG kept locally, small JPEG is what gets pinned)
-    prompt = build_prompt(trends)
+    prompt = build_prompt(trends, actions)
     (out / "prompt.txt").write_text(prompt)
     png = placeholder_png() if dry_run else generate_image(prompt)
     (out / "image.png").write_bytes(png)

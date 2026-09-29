@@ -2,7 +2,8 @@
 
 Examples:
   python main.py trends
-  python main.py prompt --trends "a,b,c"
+  python main.py scene --trends "a,b,c" [--dry-run]
+  python main.py prompt --trends "a,b,c" [--dry-run]
   python main.py image --trends "a,b,c" [--dry-run]
   python main.py metadata --trends "a,b,c" --image-uri ipfs://CID
   python main.py upload --file output/2026-09-07/image.png
@@ -16,7 +17,7 @@ import logging
 import sys
 from pathlib import Path
 
-from trendy import gallery, image, metadata, pipeline, prompt, storage, trends
+from trendy import gallery, image, metadata, pipeline, prompt, scene, storage, trends
 from trendy.config import output_dir_for
 
 
@@ -36,13 +37,24 @@ def cmd_trends(args) -> int:
     return 0
 
 
+def _prompt_from_trends(value: str, dry_run: bool) -> str:
+    topics = _split_trends(value)
+    return prompt.build_prompt(topics, scene.get_actions(topics, dry_run=dry_run))
+
+
+def cmd_scene(args) -> int:
+    for i, action in enumerate(scene.get_actions(_split_trends(args.trends), dry_run=args.dry_run), 1):
+        print(f"{i}. {action}")
+    return 0
+
+
 def cmd_prompt(args) -> int:
-    print(prompt.build_prompt(_split_trends(args.trends)))
+    print(_prompt_from_trends(args.trends, args.dry_run))
     return 0
 
 
 def cmd_image(args) -> int:
-    text = args.prompt or prompt.build_prompt(_split_trends(args.trends))
+    text = args.prompt or _prompt_from_trends(args.trends, args.dry_run)
     png = image.placeholder_png() if args.dry_run else image.generate_image(text)
     out = Path(args.out) if args.out else output_dir_for(pipeline.today()) / "image.png"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -106,8 +118,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true", help="skip the model, use raw headlines")
     p.set_defaults(func=cmd_trends)
 
+    p = sub.add_parser("scene", help="write what the boy and his household do with each trend")
+    p.add_argument("--trends", required=True, help='comma-separated, e.g. "a,b,c"')
+    p.add_argument("--dry-run", action="store_true", help="skip the model, use generic actions")
+    p.set_defaults(func=cmd_scene)
+
     p = sub.add_parser("prompt", help="build the image prompt from trends")
     p.add_argument("--trends", required=True, help='comma-separated, e.g. "a,b,c"')
+    p.add_argument("--dry-run", action="store_true", help="skip the model, use generic actions")
     p.set_defaults(func=cmd_prompt)
 
     p = sub.add_parser("image", help="generate an image (OpenAI)")

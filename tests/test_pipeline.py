@@ -28,6 +28,9 @@ def test_run_calls_steps_in_order_and_writes_result(out_dir, monkeypatch):
         return "QmImg"
 
     monkeypatch.setattr(pipeline, "get_trends", lambda **kw: calls.append("trends") or ["A", "B", "C"])
+    monkeypatch.setattr(
+        pipeline, "get_actions", lambda topics, **kw: calls.append("actions") or [f"acts out {t}" for t in topics]
+    )
     monkeypatch.setattr(pipeline, "generate_image", lambda p: calls.append("image") or image.placeholder_png(64, 64))
     monkeypatch.setattr(pipeline, "upload_file", fake_upload_file)
     monkeypatch.setattr(pipeline, "upload_json", lambda obj, name: calls.append("upload_json") or "QmMeta")
@@ -35,16 +38,17 @@ def test_run_calls_steps_in_order_and_writes_result(out_dir, monkeypatch):
 
     result = pipeline.run(run_date="2026-09-07")
 
-    assert calls == ["trends", "image", "upload_file", "upload_json", "gallery"]
+    assert calls == ["trends", "actions", "image", "upload_file", "upload_json", "gallery"]
     assert result["image_uri"] == "ipfs://QmImg"
     assert result["metadata_uri"] == "ipfs://QmMeta"
+    assert "In the centre: acts out A. Around him: acts out B; acts out C." in result["prompt"]
 
     # the small JPEG is what gets pinned, not the PNG
     assert uploaded["data"].startswith(image.JPEG_MAGIC)
     assert uploaded["name"].endswith(".jpg")
 
     folder = out_dir / "2026-09-07"
-    for name in ["trends.json", "prompt.txt", "image.png", "image.jpg", "metadata.json", "result.json"]:
+    for name in ["trends.json", "actions.json", "prompt.txt", "image.png", "image.jpg", "metadata.json", "result.json"]:
         assert (folder / name).exists(), name
     assert json.loads((folder / "metadata.json").read_text())["image"] == "ipfs://QmImg"
 
@@ -61,6 +65,7 @@ def test_dry_run_makes_no_paid_calls_and_skips_gallery(out_dir, monkeypatch):
     result = pipeline.run(run_date="2026-09-07", trends=["A", "B"], dry_run=True)
     assert result["dry_run"] is True
     assert result["image_cid"] == pipeline.DRY_RUN_IMAGE_CID
+    assert "The boy acts out the news about A" in result["prompt"]  # fallback actions, no model
     assert (out_dir / "2026-09-07" / "image.png").read_bytes().startswith(image.PNG_MAGIC)
     assert (out_dir / "2026-09-07" / "image.jpg").read_bytes().startswith(image.JPEG_MAGIC)
 

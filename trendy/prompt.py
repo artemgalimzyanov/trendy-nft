@@ -1,4 +1,6 @@
-"""Step 2a: turn trend words into an image prompt (pure function)."""
+"""Step 2a: turn trends and their actions into an image prompt (pure function)."""
+
+from trendy.scene import HOUSEHOLD, fallback_actions
 
 DEFAULT_STYLE = (
     "Classic British single-panel newspaper cartoon. Loose, wobbly pen-and-ink linework "
@@ -9,28 +11,52 @@ DEFAULT_STYLE = (
     "caption in plain English beneath the drawing, and no other text"
 )
 
+# The same boy every day, so the gallery reads as one series.
+HERO = (
+    "a curious boy of about eight with tousled ginger hair, an oversized green "
+    "hand-knitted jumper, grey shorts and red wellies"
+)
+
 TEMPLATE = (
     "A single-panel comic cartoon set in a slightly shabby English country house or its "
-    "muddy grounds. An eccentric elderly aristocratic couple, surrounded by their "
-    "overweight small dogs, react to today's world news with absurd, out-of-touch "
-    "misunderstanding. The news topics, in order of importance: {topics}. Make the first "
-    "topic the heart of the joke; hint at the others through small props, a newspaper, a "
-    "television or a portrait on the wall. Show real public figures only as symbols or "
-    "props, never as realistic portraits. Treat tragic events with restraint, never "
-    "showing violence. Style: {style}."
+    "muddy grounds. The hero is {hero}. He lives there with {household}, and today the "
+    "whole household is acting out the world news: {topics}. {scene} Each action should "
+    "read at a glance and be funny in a gentle, innocent way. Show real public figures "
+    "only as symbols or props, never as realistic portraits. Treat tragic events with "
+    "restraint, never showing violence. Style: {style}."
 )
 
 MAX_PROMPT_CHARS = 4000
 
 
-def build_prompt(trends: list[str], style: str = DEFAULT_STYLE) -> str:
-    """Build a deterministic prompt from a list of trend strings."""
+def _scene(actions: list[str]) -> str:
+    """Boy in the centre, household around him, the rest as props (roles as in scene.py)."""
+    parts = [f"In the centre: {actions[0]}."]
+    if actions[1:3]:
+        parts.append(f"Around him: {'; '.join(actions[1:3])}.")
+    if actions[3:]:
+        parts.append(f"Small background details: {'; '.join(actions[3:])}.")
+    return " ".join(parts)
+
+
+def build_prompt(
+    trends: list[str], actions: list[str] | None = None, style: str = DEFAULT_STYLE
+) -> str:
+    """Build a deterministic prompt from trends and one action per trend.
+
+    Without actions the generic fallback actions are used, so this stays free and offline.
+    """
     cleaned = [t.strip() for t in trends if t and t.strip()]
     if not cleaned:
         raise ValueError("At least one trend is required to build a prompt")
 
-    topics = "; ".join(cleaned)
-    prompt = TEMPLATE.format(topics=topics, style=style)
+    prompt = TEMPLATE.format(
+        hero=HERO,
+        household=HOUSEHOLD,
+        topics="; ".join(cleaned),
+        scene=_scene(actions or fallback_actions(cleaned)),
+        style=style,
+    )
     if len(prompt) > MAX_PROMPT_CHARS:
         prompt = prompt[:MAX_PROMPT_CHARS]
     return prompt
