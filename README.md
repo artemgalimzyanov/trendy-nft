@@ -1,75 +1,51 @@
 # Trendy
 
-Daily pipeline: **top trends → AI image → IPFS**, with NFT‑ready metadata.
+**One picture a day of what the world is talking about.**
+
+👉 See the gallery: [artemgalimzyanov.github.io/trendy-nft](https://artemgalimzyanov.github.io/trendy-nft/)
+
+## The idea
+
+Every day the news is full of big, loud and often heavy stories. Trendy turns each day's top
+global stories into a single hand-drawn style cartoon, and puts that cartoon on decentralized
+storage so it stays around as a permanent record of the day.
+
+The pictures are a series with recurring characters: a curious ginger-haired boy who lives
+in a slightly shabby English country house with his eccentric grandparents, a weary butler,
+a gardener and two overweight dogs. Every day the household hears the world news and acts it
+out at home with toys, garden tools and teacups. The style is a classic British newspaper
+cartoon: wobbly ink lines, soft watercolour, gentle humour. Real people show up only as
+symbols or props, and sad events are drawn quietly and with care, never as a joke.
+
+Over a year the gallery grows into a 365-day calendar of the world's news, one cartoon per
+day. Each picture comes with NFT-ready metadata, so any day can be minted as an NFT later.
+
+## How it works
+
+The pipeline runs automatically once a day:
 
 ```
-headlines (21 world news RSS feeds) → 5 global topics (OpenAI gpt-5.4-mini) → prompt
-→ image (OpenAI gpt-image-2) → 512x512 JPEG → IPFS (Pinata) → metadata.json → IPFS
-→ docs/gallery.json → static grid page (GitHub Pages)
+world news → top 5 topics → cartoon scene → image prompt → AI image → IPFS → gallery page
 ```
 
-Trends come from ~20 outlets spanning North America, Europe, the Middle East, Asia, Africa,
-Latin America, Eastern Europe and Oceania (see `NEWS_FEEDS` in `trendy/trends.py`).
-A small text model picks the 5 topics covered by the most outlets.
+1. **Get the trends.** Headlines are collected from about 20 news outlets across North
+   America, Europe, the Middle East, Asia, Africa, Latin America and Oceania. A small
+   language model picks the 5 stories that the most outlets are covering, so no single
+   country or outlet sets the agenda.
+2. **Write the scene.** Each topic becomes one short action for the cartoon cast. The boy
+   acts out the top story, two household members act out the next two, and the rest show up
+   as small props in the background.
+3. **Build the prompt.** The actions are combined with a fixed description of the hero,
+   the house and the art style, so every day looks like part of the same series.
+4. **Generate the image.** An AI image model draws the cartoon. A small JPEG copy is made
+   for storage and the web.
+5. **Store it.** The image is pinned to IPFS (decentralized storage). Then a metadata file
+   (date, trends, prompt, image link) in the ERC-721 NFT format is pinned there too.
+6. **Publish.** The day is added to the gallery, a static page on GitHub Pages that shows
+   a grid of days. Click any day to see the full picture, its trends and its IPFS links.
 
-Only the small JPEG (~50 KB) is pinned; the full 1024x1024 PNG stays in `output/` and in the workflow artifact.
+## What's next
 
-Every step is a small module, a CLI sub-command and a test file, so each can be run and checked on its own. See [PLAN.md](PLAN.md) for the build plan.
-
-## Setup
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-cp .env.example .env      # then fill in OPENAI_API_KEY and PINATA_JWT
-```
-
-## Run each step
-
-```bash
-python main.py trends                                   # 1. 5 global topics from world news (OpenAI, <1 cent)
-python main.py trends --dry-run                         #    same, without the model: raw headlines
-python main.py prompt --trends "a,b,c"                  # 2a. show the image prompt
-python main.py image --trends "a,b,c" --dry-run         # 2b. placeholder PNG + JPEG, free
-python main.py image --trends "a,b,c"                   #     real image (OpenAI, ~$0.04)
-python main.py metadata --trends "a,b,c" --image-uri ipfs://CID   # 3a. ERC-721 JSON
-python main.py upload --file output/<date>/image.jpg    # 3b. pin to IPFS, prints CID + URL
-python main.py run --dry-run                            # 4. whole pipeline, no paid calls
-python main.py run                                      #    whole pipeline for real
-python main.py serve                                    # 5. preview the grid at localhost:8000
-```
-
-Artefacts land in `output/<date>/`: `trends.json`, `prompt.txt`, `image.png` (full size), `image.jpg` (pinned), `metadata.json`, `result.json`.
-A real run also adds the day to `docs/gallery.json`. A day is only run once; add `--force` to redo it.
-
-## Gallery page
-
-`docs/index.html` is a static page that reads `docs/gallery.json` and shows a scrollable 365-cell grid starting
-at 2026-09-08 (first cell) and running forward in time. Past days without an image are empty cells, future days are
-dashed placeholders that fill in as the daily run adds pictures. Click a cell for the full image, trends and IPFS links.
-The start date and the IPFS gateway are constants at the top of the script in `index.html`.
-
-Preview locally with `python main.py serve`, then open http://localhost:8000.
-
-To publish: in the GitHub repo go to Settings → Pages → "Deploy from a branch", pick `main` and the `/docs` folder.
-The daily workflow commits `docs/gallery.json` after each run, so the page updates itself.
-
-## Tests
-
-```bash
-pytest
-```
-
-All tests run offline and need no API keys.
-
-## Daily schedule (GitHub Actions)
-
-1. Push this folder to a GitHub repo.
-2. In the repo: Settings → Secrets and variables → Actions → add `OPENAI_API_KEY` and `PINATA_JWT`.
-3. The workflow in `.github/workflows/daily.yml` runs at 18:00 UTC. Trigger it manually from the Actions tab ("Run workflow", optionally as dry run) to test.
-4. Each real run commits `docs/gallery.json` back to the repo and uploads `output/` as a workflow artifact.
-
-## Next: minting
-
-`metadata.json` already follows the ERC‑721 schema with an `ipfs://` image. To mint, add a `mint` step that calls a simple ERC‑721 contract (e.g. on Base Sepolia testnet) with the metadata URI from `result.json`.
+- **Minting.** The metadata already follows the NFT standard, so the next step is to mint
+  each day's picture on a blockchain (starting with a testnet).
+- **More sources.** Trends could also come from social media, not just news outlets.

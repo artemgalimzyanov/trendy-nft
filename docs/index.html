@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trendy</title>
+<title>Daily Global News in Pictures</title>
 <style>
   :root {
     --bg: #f6f6f4;
@@ -99,7 +99,6 @@
     background: var(--cell); border: 1px solid var(--cell-border);
     border-radius: 999px; padding: 3px 10px; font-size: 12px;
   }
-  .prompt { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
   .links a { color: var(--accent); margin-right: 14px; font-size: 13px; }
   .close {
     position: absolute; top: 8px; right: 8px;
@@ -111,7 +110,7 @@
 <body>
 <header>
   <h1>Trendy</h1>
-  <p>One AI image a day, painted from the day's top trends. Stored on IPFS.</p>
+  <p>One AI image a day, painted from the day's top trends. Stored on decentralized storage.</p>
 </header>
 <div id="status">Loading…</div>
 <main class="grid" id="grid"></main>
@@ -122,7 +121,6 @@
   <div class="info">
     <h2 id="dlg-date"></h2>
     <div class="chips" id="dlg-trends"></div>
-    <p class="prompt" id="dlg-prompt"></p>
     <div class="links">
       <a id="dlg-image-link" target="_blank" rel="noopener">Image on IPFS</a>
       <a id="dlg-meta-link" target="_blank" rel="noopener">Metadata on IPFS</a>
@@ -133,7 +131,7 @@
 <script>
   // Change this one line to switch gateways (ipfs.io, dweb.link, your dedicated Pinata gateway).
   const GATEWAY = "https://gateway.pinata.cloud/ipfs/";
-  const START_DATE = "2026-09-20";  // first cell; the grid grows day by day from here
+  const START_DATE = "2026-09-27";  // first cell; the grid grows day by day from here
   const DAYS = 365;
 
   const grid = document.getElementById("grid");
@@ -184,7 +182,6 @@
     document.getElementById("dlg-date").textContent = entry.date;
     const chips = document.getElementById("dlg-trends");
     chips.replaceChildren(...entry.trends.map((t) => el("span", { class: "chip" }, t)));
-    document.getElementById("dlg-prompt").textContent = entry.prompt || "";
     document.getElementById("dlg-image-link").href = url(entry.image_cid);
     document.getElementById("dlg-meta-link").href = url(entry.metadata_cid);
     dlg.showModal();
