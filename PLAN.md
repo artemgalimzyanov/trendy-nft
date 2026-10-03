@@ -154,6 +154,77 @@ Decisions: a text model writes the actions; the recurring hero is a young boy; t
 - Workflow has `contents: write`; after a real run it commits `docs/gallery.json` and pushes. GitHub Pages serves `/docs` from `main`.
 - **Test:** manual "Run workflow", then refresh the Pages URL.
 
+## Phase 3 (added 2026-10-01): decentralized hosting at galim.eth
+
+### Context
+The gallery currently runs on GitHub Pages (`docs/index.html` + `docs/gallery.json`, with `gallery.json` committed by the daily workflow). Images and metadata are already on IPFS (Pinata), but the page itself is not. Goal: serve the gallery from IPFS at **https://galim.eth.limo**, with GitHub Pages kept as a mirror.
+
+Decisions (from the user):
+| Decision | Choice |
+|---|---|
+| Name | `galim.eth` itself (root name) |
+| Daily updates | IPNS pointer: ENS contenthash is set **once** to `ipns://<key>`; CI republishes the IPNS record each day. No wallet key in CI, no daily gas. |
+| GitHub Pages | Kept as a mirror |
+| ENS transactions | The user signs them by hand (one-time) |
+
+How it fits together:
+```
+daily run → gallery.json → upload docs/ folder to Pinata → site CID
+→ ipfs name publish (IPNS key from GitHub secret) → /ipns/k51… → /ipfs/<site CID>
+galim.eth contenthash = ipns://k51…   (set once)   →   galim.eth.limo
+```
+
+Pinata no longer offers IPNS, so the IPNS record is published by a short-lived kubo (IPFS) node inside the GitHub Action. The record is valid for 72 h and republished every day, so missing one day is fine. The site's content itself stays pinned on Pinata.
+
+### Step 14 – Upload the site folder (`trendy/storage.py`, `trendy/site.py`, `main.py`)
+- `storage.upload_dir(files: dict[str, bytes], name) -> str`: one `pinFileToIPFS` request that sends all files under a common folder name (`site/index.html`, `site/gallery.json`) with `pinataOptions: {"cidVersion": 1}`. It returns the folder CID. It reuses `_headers()`/`TIMEOUT`.
+- `site.publish_site(docs_dir=DOCS_DIR) -> str`: reads `index.html` and `gallery.json`, uploads them, and returns the CID. (`DOCS_DIR` is reused from `trendy/gallery.py`.)
+- CLI `python main.py site` prints the CID and `gateway_url(cid) + "/"`.
+- **Test:** `tests/test_site.py` mocks Pinata with `responses` and checks that both files are sent under one folder and the CID is parsed. Manual: run `python main.py site`, open the printed URL and check that the grid loads (`gallery.json` is fetched relative to the page, so it works from any folder).
+
+### Step 15 – Create the IPNS name (one-time, local, no code)
+- `brew install ipfs`, `ipfs init`, then `ipfs key gen trendy --type=ed25519`. Write down the `k51…` name.
+- `ipfs daemon` (in another terminal), then `ipfs name publish --key=trendy --lifetime=72h --ttl=1h /ipfs/<CID from step 14>`.
+- `ipfs key export trendy -o trendy.key`, then `base64 -i trendy.key | pbcopy`. Store it as GitHub secret `IPNS_KEY`, and also as `IPNS_NAME` (the `k51…` name, not sensitive). Keep `trendy.key` out of git (add `*.key` to `.gitignore`) and back it up: losing it means a new ENS transaction.
+- **Test:** `https://ipfs.io/ipns/k51…/` (or `https://k51….ipns.dweb.link/`) shows the gallery.
+
+### Step 16 – Point galim.eth at the IPNS name (one-time, user signs)
+- Go to app.ens.domains → galim.eth → Records → Edit → **Content hash** = `ipns://k51…` → Save, then sign the transaction (one mainnet tx). If the name uses an old resolver without contenthash support, ENS will first offer to switch to the Public Resolver, which is one extra tx.
+- **Test:** `https://galim.eth.limo` shows the gallery (the first load may take up to a minute). Also check `https://galim.eth.limo/gallery.json`.
+
+### Step 17 – Republish daily from CI (`.github/workflows/daily.yml`)
+After "Commit gallery.json" (real runs only):
+1. `python main.py site` → capture the CID into `$GITHUB_OUTPUT`.
+2. Install kubo (pinned release tarball from dist.ipfs.tech), `ipfs init --profile=server`, then decode `IPNS_KEY` and run `ipfs key import trendy`.
+3. Start `ipfs daemon &`, wait until `ipfs id` works and a few peers are connected.
+4. `ipfs name publish --key=trendy --lifetime=72h --ttl=1h /ipfs/$CID`, then `ipfs name resolve /ipns/$IPNS_NAME` as a check. Optionally also send the record to the delegated router `delegated-ipfs.dev` (`ipfs routing put`) for faster resolution by gateways.
+- Add a `workflow_dispatch` input `republish_only` that skips the pipeline and only runs steps 1–4. This covers the case where a record is about to expire without a new image.
+- **Test:** run the workflow manually with `republish_only`. In the log, `name resolve` must return the new CID. Within about 10 minutes, galim.eth.limo shows the latest `gallery.json`.
+
+### Step 18 – Gateway and housekeeping (`docs/index.html`, `trendy/site.py`)
+- Image gateway: keep the `GATEWAY` constant, but consider `https://ipfs.io/ipfs/` or `dweb.link` so the decentralized site doesn't depend on Pinata's rate-limited public gateway. Decide after testing load speed on limo.
+- Unpin yesterday's site folder after a new one is pinned. Pins are named `trendy-site`: list pins by that name via the Pinata API and unpin all but the newest. This keeps the Pinata free tier tidy (images and metadata are never unpinned).
+- **Test:** `tests/test_site.py` covers the unpin logic with mocked list/unpin calls. Run the workflow twice and confirm Pinata shows only one `trendy-site` pin.
+
+### Step 19 – README
+- Make the main link `https://galim.eth.limo` and list GitHub Pages as a mirror.
+
+### Critical files
+- `trendy/storage.py` (add `upload_dir`, unpin helpers), new `trendy/site.py`, `main.py` (new `site` command)
+- `.github/workflows/daily.yml` (site + IPNS steps, `republish_only` input, secrets `IPNS_KEY`/`IPNS_NAME`)
+- `.gitignore`, `README.md`, `PLAN.md`
+
+### Verification (end-to-end)
+1. `pytest` passes offline.
+2. `python main.py site`: the gateway URL shows the grid.
+3. `https://ipfs.io/ipns/k51…/` shows the same grid.
+4. `https://galim.eth.limo` shows the grid; after the next daily run it shows the new day.
+5. GitHub Pages still works as before.
+
+### Risks / notes
+- IPNS caching: limo and gateways cache records for up to the TTL (1 h), so the new day can appear a bit later than on GitHub Pages.
+- If the DHT publish from short-lived runners proves unreliable, switch only step 17 to a hosted IPNS service (e.g. Filebase IPNS names). The ENS record stays the same as long as the key is kept.
+
 ## Future phase (not in MVP): minting
 Metadata is already ERC‑721 compatible with an `ipfs://` image. When ready: add `trendy/mint.py` using a simple ERC‑721 contract on Base Sepolia (testnet), one `mint` sub-command, one extra secret (`WALLET_PRIVATE_KEY`). Nothing in the MVP needs to change.
 

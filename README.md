@@ -6,19 +6,15 @@
 
 ## The idea
 
-Every day the news is full of big, loud and often heavy stories. Trendy turns each day's top
-global stories into a single hand-drawn style cartoon, and puts that cartoon on decentralized
-storage so it stays around as a permanent record of the day.
+We are surrounded by daily news and endless noise. Often, consuming the news leaves us feeling distressed, sad, or angry. Sometimes, we check the news so frequently that it becomes almost addictive.
 
-The pictures are a series with recurring characters: a curious ginger-haired boy who lives
-in a slightly shabby English country house with his eccentric grandparents, a weary butler,
-a gardener and two overweight dogs. Every day the household hears the world news and acts it
-out at home with toys, garden tools and teacups. The style is a classic British newspaper
-cartoon: wobbly ink lines, soft watercolour, gentle humour. Real people show up only as
-symbols or props, and sad events are drawn quietly and with care, never as a joke.
+The aim of this app is to transform each day’s top global stories into a single, hand-drawn-style cartoon, presenting the news in a friendlier and more approachable way.
 
-Over a year the gallery grows into a 365-day calendar of the world's news, one cartoon per
-day. Each picture comes with NFT-ready metadata, so any day can be minted as an NFT later.
+To preserve each day’s artwork, decentralized storage was chosen. Each image is stored as a permanent record and will remain available even if the front end disappears.
+
+The pictures form a series featuring recurring characters: a curious, ginger-haired boy who lives with his eccentric grandparents in a slightly shabby English country house. The visual style was inspired by a recent visit to London, when I was walking through Kensington and came across Annie Tempest’s comic strip Tottering-by-Gently.
+
+Over time, the gallery will grow into a 365-day calendar of world news, with one cartoon for each day. Every image includes NFT-ready metadata, allowing any day’s artwork to be minted as an NFT in the future.
 
 ## How it works
 
@@ -40,12 +36,11 @@ world news → top 5 topics → cartoon scene → image prompt → AI image → 
 4. **Generate the image.** An AI image model draws the cartoon. A small JPEG copy is made
    for storage and the web.
 5. **Store it.** The image is pinned to IPFS (decentralized storage). Then a metadata file
-   (date, trends, prompt, image link) in the ERC-721 NFT format is pinned there too.
+   (date, trends, image link) in the ERC-721 NFT format is pinned there too.
 6. **Publish.** The day is added to the gallery, a static page on GitHub Pages that shows
    a grid of days. Click any day to see the full picture, its trends and its IPFS links.
 
 ## What's next
 
 - **Minting.** The metadata already follows the NFT standard, so the next step is to mint
-  each day's picture on a blockchain (starting with a testnet).
-- **More sources.** Trends could also come from social media, not just news outlets.
+  each day's picture on a blockchain.
