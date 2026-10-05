@@ -10,7 +10,7 @@ import logging
 import feedparser
 import requests
 
-from trendy.config import require_env
+from trendy.config import openai_client
 
 log = logging.getLogger(__name__)
 
@@ -117,15 +117,9 @@ def fetch_headlines(
     return headlines
 
 
-def _default_client():
-    from openai import OpenAI  # lazy import: dry-run and tests need no key
-
-    return OpenAI(api_key=require_env("OPENAI_API_KEY"))
-
-
 def pick_topics(headlines: dict[str, list[str]], n: int = DEFAULT_COUNT, client=None) -> list[str]:
     """Ask the model for the n most widely covered topics across the given headlines."""
-    client = client or _default_client()
+    client = client or openai_client()
     user_text = "\n\n".join(
         f"## {outlet}\n" + "\n".join(f"- {h}" for h in titles) for outlet, titles in headlines.items()
     )

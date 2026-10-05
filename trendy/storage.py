@@ -17,13 +17,13 @@ def _headers() -> dict:
     return {"Authorization": f"Bearer {require_env('PINATA_JWT')}"}
 
 
-def upload_file(data: bytes, filename: str, name: str | None = None) -> str:
+def upload_file(data: bytes, filename: str) -> str:
     """Pin raw bytes to IPFS and return the CID."""
     response = requests.post(
         PIN_FILE_URL,
         headers=_headers(),
         files={"file": (filename, data)},
-        data={"pinataMetadata": json.dumps({"name": name or filename})},
+        data={"pinataMetadata": json.dumps({"name": filename})},
         timeout=TIMEOUT,
     )
     response.raise_for_status()

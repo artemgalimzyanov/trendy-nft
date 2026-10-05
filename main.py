@@ -60,7 +60,7 @@ def cmd_image(args) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(png)
     jpg = out.with_suffix(".jpg")
-    jpg.write_bytes(image.shrink_to_jpeg(png))
+    jpg.write_bytes(image.to_jpeg(png))
     print(f"{out}  (full size PNG)")
     print(f"{jpg}  ({image.PIN_SIZE}x{image.PIN_SIZE} JPEG, this one gets pinned)")
     return 0
@@ -77,9 +77,7 @@ def cmd_serve(args) -> int:
 
 
 def cmd_metadata(args) -> int:
-    data = metadata.build_metadata(
-        _split_trends(args.trends), args.image_uri, args.date or pipeline.today(), args.prompt or ""
-    )
+    data = metadata.build_metadata(_split_trends(args.trends), args.image_uri, args.date or pipeline.today())
     print(json.dumps(data, indent=2, ensure_ascii=False))
     return 0
 
@@ -129,8 +127,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_prompt)
 
     p = sub.add_parser("image", help="generate an image (OpenAI)")
-    p.add_argument("--trends", help="comma-separated trends (builds the prompt)")
-    p.add_argument("--prompt", help="use this exact prompt instead")
+    source = p.add_mutually_exclusive_group(required=True)
+    source.add_argument("--trends", help="comma-separated trends (builds the prompt)")
+    source.add_argument("--prompt", help="use this exact prompt instead")
     p.add_argument("--out", help="output PNG path (default output/<date>/image.png)")
     p.add_argument("--dry-run", action="store_true", help="write a placeholder PNG, no API call")
     p.set_defaults(func=cmd_image)
@@ -139,7 +138,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--trends", required=True)
     p.add_argument("--image-uri", required=True, help="e.g. ipfs://CID")
     p.add_argument("--date", help="ISO date (default today)")
-    p.add_argument("--prompt", help="prompt to record in properties")
     p.set_defaults(func=cmd_metadata)
 
     p = sub.add_parser("upload", help="upload a file or .json to IPFS via Pinata")
@@ -168,9 +166,6 @@ def main(argv=None) -> int:
         format="%(levelname)s %(name)s: %(message)s",
         stream=sys.stderr,
     )
-    if args.command == "image" and not args.prompt and not args.trends:
-        print("error: image needs --trends or --prompt", file=sys.stderr)
-        return 2
     return args.func(args)
 
 

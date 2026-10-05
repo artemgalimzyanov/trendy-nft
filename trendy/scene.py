@@ -8,7 +8,7 @@ fallback_actions() is used on dry runs or if the model fails.
 import json
 import logging
 
-from trendy.config import require_env
+from trendy.config import openai_client
 
 log = logging.getLogger(__name__)
 
@@ -50,15 +50,9 @@ def _clean(action) -> str:
     return action.strip().rstrip(".").strip() if isinstance(action, str) else ""
 
 
-def _default_client():
-    from openai import OpenAI  # lazy import: dry-run and tests need no key
-
-    return OpenAI(api_key=require_env("OPENAI_API_KEY"))
-
-
 def write_actions(topics: list[str], client=None) -> list[str]:
     """Ask the model for one action per topic, in order; gaps are filled from the fallback."""
-    client = client or _default_client()
+    client = client or openai_client()
     response = client.chat.completions.create(
         model=SCENE_MODEL,
         response_format={"type": "json_object"},

@@ -22,6 +22,13 @@ def require_env(name: str) -> str:
     return value
 
 
+def openai_client():
+    """OpenAI client from OPENAI_API_KEY; imported lazily so tests and dry runs need no key."""
+    from openai import OpenAI
+
+    return OpenAI(api_key=require_env("OPENAI_API_KEY"))
+
+
 def output_dir_for(run_date: str) -> Path:
     """Return (and create) the output folder for a given ISO date."""
     path = OUTPUT_DIR / run_date

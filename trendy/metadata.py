@@ -3,7 +3,7 @@
 COLLECTION_NAME = "Trendy"
 
 
-def build_metadata(trends: list[str], image_uri: str, run_date: str, prompt: str = "") -> dict:
+def build_metadata(trends: list[str], image_uri: str, run_date: str) -> dict:
     """Return a metadata dict following the ERC-721 / OpenSea JSON schema."""
     if not trends:
         raise ValueError("trends must not be empty")

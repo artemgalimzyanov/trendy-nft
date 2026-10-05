@@ -28,19 +28,18 @@ def test_generate_image_decodes_png_from_client():
     assert client.images.calls[0]["model"] == image.MODEL
 
 
-def test_shrink_to_jpeg_produces_square_jpeg():
+def test_to_jpeg_produces_square_jpeg():
     from io import BytesIO
 
     from PIL import Image
 
     png = image.placeholder_png(width=1024, height=1024)
-    jpeg = image.shrink_to_jpeg(png)
+    jpeg = image.to_jpeg(png)
 
     assert jpeg.startswith(image.JPEG_MAGIC)
     with Image.open(BytesIO(jpeg)) as im:
         assert im.format == "JPEG"
         assert im.size == (image.PIN_SIZE, image.PIN_SIZE)
-    assert len(jpeg) < len(png)
 
 
 def test_placeholder_png_is_valid_png_without_any_key(monkeypatch):

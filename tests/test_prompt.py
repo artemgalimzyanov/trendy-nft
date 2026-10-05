@@ -1,6 +1,6 @@
 import pytest
 
-from trendy.prompt import HERO, MAX_PROMPT_CHARS, build_prompt
+from trendy.prompt import HERO, build_prompt
 
 
 def test_prompt_contains_every_trend():
@@ -26,16 +26,8 @@ def test_prompt_without_actions_uses_fallback_and_skips_empty_groups():
     assert "background details" not in prompt
 
 
-def test_prompt_is_deterministic_and_bounded():
-    a = build_prompt(["x", "y"])
-    b = build_prompt(["x", "y"])
-    assert a == b
-    assert len(a) <= MAX_PROMPT_CHARS
-
-
-def test_prompt_truncates_very_long_input():
-    prompt = build_prompt(["w" * 10_000])
-    assert len(prompt) == MAX_PROMPT_CHARS
+def test_prompt_is_deterministic():
+    assert build_prompt(["x", "y"]) == build_prompt(["x", "y"])
 
 
 def test_prompt_rejects_empty():

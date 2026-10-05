@@ -5,34 +5,30 @@ import struct
 import zlib
 from io import BytesIO
 
-from trendy.config import require_env
+from trendy.config import openai_client
 
 MODEL = "gpt-image-2"
-DEFAULT_SIZE = "1024x1024"  # smallest size gpt-image-1 offers
-DEFAULT_QUALITY = "medium"  # low | medium | high
+DEFAULT_SIZE = "1024x1024"
+DEFAULT_QUALITY = "high"  # low | medium | high
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 JPEG_MAGIC = b"\xff\xd8"
 
-# The version that gets pinned to IPFS: small square JPEG, ~50 KB.
-PIN_SIZE = 512
+# The version that gets pinned to IPFS: full-resolution square JPEG, ~150 KB.
+PIN_SIZE = 1024
 JPEG_QUALITY = 85
 
 
-def shrink_to_jpeg(png: bytes, size: int = PIN_SIZE, quality: int = JPEG_QUALITY) -> bytes:
-    """Resize a PNG to size x size and encode it as JPEG."""
+def to_jpeg(png: bytes, size: int = PIN_SIZE, quality: int = JPEG_QUALITY) -> bytes:
+    """Encode a PNG as a size x size JPEG, resizing only if needed."""
     from PIL import Image  # lazy import keeps the CLI fast for non-image commands
 
     with Image.open(BytesIO(png)) as im:
-        im = im.convert("RGB").resize((size, size), Image.LANCZOS)
+        im = im.convert("RGB")
+        if im.size != (size, size):
+            im = im.resize((size, size), Image.LANCZOS)
         buf = BytesIO()
         im.save(buf, format="JPEG", quality=quality, optimize=True)
     return buf.getvalue()
-
-
-def _default_client():
-    from openai import OpenAI  # imported lazily so tests/dry-run don't need a key
-
-    return OpenAI(api_key=require_env("OPENAI_API_KEY"))
 
 
 def generate_image(
@@ -42,7 +38,7 @@ def generate_image(
     client=None,
 ) -> bytes:
     """Call OpenAI and return the raw PNG bytes."""
-    client = client or _default_client()
+    client = client or openai_client()
     response = client.images.generate(
         model=MODEL,
         prompt=prompt,

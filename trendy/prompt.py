@@ -26,8 +26,6 @@ TEMPLATE = (
     "restraint, never showing violence. Style: {style}."
 )
 
-MAX_PROMPT_CHARS = 4000
-
 
 def _scene(actions: list[str]) -> str:
     """Boy in the centre, household around him, the rest as props (roles as in scene.py)."""
@@ -50,13 +48,10 @@ def build_prompt(
     if not cleaned:
         raise ValueError("At least one trend is required to build a prompt")
 
-    prompt = TEMPLATE.format(
+    return TEMPLATE.format(
         hero=HERO,
         household=HOUSEHOLD,
         topics="; ".join(cleaned),
         scene=_scene(actions or fallback_actions(cleaned)),
         style=style,
     )
-    if len(prompt) > MAX_PROMPT_CHARS:
-        prompt = prompt[:MAX_PROMPT_CHARS]
-    return prompt

@@ -6,7 +6,7 @@ from datetime import date
 
 from trendy.config import output_dir_for
 from trendy.gallery import add_entry
-from trendy.image import generate_image, placeholder_png, shrink_to_jpeg
+from trendy.image import generate_image, placeholder_png, to_jpeg
 from trendy.metadata import build_metadata
 from trendy.prompt import build_prompt
 from trendy.scene import get_actions
@@ -30,7 +30,7 @@ def run(
     dry_run: bool = False,
     force: bool = False,
 ) -> dict:
-    """Run trends -> actions -> prompt -> image -> shrink -> upload -> metadata -> upload -> gallery.
+    """Run trends -> actions -> prompt -> image -> jpeg -> upload -> metadata -> upload -> gallery.
 
     Every intermediate artefact is written to output/<date>/.
     With dry_run=True no paid API is called (headline fallback instead of the topic
@@ -54,19 +54,19 @@ def run(
     (out / "actions.json").write_text(json.dumps(actions, indent=2, ensure_ascii=False))
     log.info("Actions: %s", actions)
 
-    # 2. prompt + image (full-size PNG kept locally, small JPEG is what gets pinned)
+    # 2. prompt + image (PNG kept locally, the JPEG is what gets pinned)
     prompt = build_prompt(trends, actions)
     (out / "prompt.txt").write_text(prompt)
     png = placeholder_png() if dry_run else generate_image(prompt)
     (out / "image.png").write_bytes(png)
-    jpeg = shrink_to_jpeg(png)
+    jpeg = to_jpeg(png)
     jpeg_path = out / "image.jpg"
     jpeg_path.write_bytes(jpeg)
     log.info("Image written to %s (%d KB pinned version)", jpeg_path, len(jpeg) // 1024)
 
     # 3. upload JPEG, build + upload metadata
     image_cid = DRY_RUN_IMAGE_CID if dry_run else upload_file(jpeg, f"trendy-{run_date}.jpg")
-    metadata = build_metadata(trends, ipfs_uri(image_cid), run_date, prompt)
+    metadata = build_metadata(trends, ipfs_uri(image_cid), run_date)
     (out / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False))
     metadata_cid = (
         DRY_RUN_METADATA_CID if dry_run else upload_json(metadata, f"trendy-{run_date}.json")
