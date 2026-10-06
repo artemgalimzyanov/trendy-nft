@@ -9,7 +9,9 @@ from trendy.config import require_env
 PINATA_API = "https://api.pinata.cloud"
 PIN_FILE_URL = f"{PINATA_API}/pinning/pinFileToIPFS"
 PIN_JSON_URL = f"{PINATA_API}/pinning/pinJSONToIPFS"
-GATEWAY = "https://gateway.pinata.cloud/ipfs"
+## GATEWAY = "https://gateway.pinata.cloud/ipfs"
+GATEWAY = "https://yellow-adverse-sawfish-661.mypinata.cloud/ipfs"
+
 TIMEOUT = 60
 
 
